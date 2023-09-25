@@ -2,6 +2,11 @@ var vertexShaderSource;
 var fragmentShaderSource;
 //var image = new Image();
 var image = document.querySelector("#img");
+var bmp;
+
+var startTime = Date.now();
+const deltaAngle = 1.0;
+var newAngle = 0.0;
 
 function main() {
   var canvas = document.querySelector("#c");
@@ -27,13 +32,20 @@ function main() {
     program,
     "u_resolution"
   );
+
+  var rotationMatrixLocation = gl.getUniformLocation(program, "rotationMatrix");
   var imageLocation = gl.getUniformLocation(program, "u_image");
 
   var positionBuffer = gl.createBuffer();
 
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-  var positions = [10, 20, 80, 20, 10, 30, 10, 30, 80, 20, 80, 30];
+  var positions = [10, 20,
+    180, 20,
+    10, 130,
+    10, 130,
+    180, 20,
+    180, 130];
 
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
@@ -112,20 +124,30 @@ function main() {
 
   gl.useProgram(program);
 
-  // draw loop
-  gl.bindVertexArray(vao);
+  function updateFrame(){
+    // draw loop
+    gl.bindVertexArray(vao);
 
-  gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+    gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 
-  // samler uniform
-  gl.uniform1i(imageLocation, 0);
+    // sampler uniform
+    gl.uniform1i(imageLocation, 0);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    var rotMatrix = setRotationMatrix();
+    gl.uniformMatrix2fv(rotationMatrixLocation, false, rotMatrix);
 
-  var primitiveType = gl.TRIANGLES;
-  offset = 0;
-  var count = 6;
-  gl.drawArrays(primitiveType, offset, count);
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+    var primitiveType = gl.TRIANGLES;
+    offset = 0;
+    var count = 6;
+    gl.drawArrays(primitiveType, offset, count);
+
+    window.requestAnimationFrame(updateFrame);
+
+  }
+
+  window.requestAnimationFrame(updateFrame);
 
   return;
 }
@@ -155,6 +177,17 @@ function createProgram(gl, vertexShader, fragmentShader) {
 
   console.log(gl.getProgramInfoLog(program));
   gl.deleteProgram(program);
+}
+
+function setRotationMatrix(){
+  var timeNow = Date.now();
+  var deltaTime = timeNow - startTime;
+  startTime = timeNow;
+
+  newAngle += (deltaAngle * deltaTime)/1000.0;
+  const cos = Math.cos(newAngle);
+  const sin = Math.sin(newAngle);
+  return [cos, sin, -sin, cos];
 }
 
 fetch("helloWorld.vs")
@@ -188,13 +221,19 @@ fetch("helloWorld.vs")
 
         // load image object
 
-        // var url = "lava_texture.jpg";
-        var url =
-          "https://c1.staticflickr.com/9/8873/18598400202_3af67ef38f_q.jpg";
+        var url = "lava_texture.jpg";
+        // var url = "https://c1.staticflickr.com/9/8873/18598400202_3af67ef38f_q.jpg";
         image.onload = function () {
+
           main();
+          // createImageBitmap(image).then(
+          //   (imgBmp) => {
+          //     bmp = imgBmp;
+          //     main();
+          //   }
+          // )
         };
-        requestCORSIfNotSameOrigin(image, url);
+        //requestCORSIfNotSameOrigin(image, url);
         image.src = url;
       });
   });
